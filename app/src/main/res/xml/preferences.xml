@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+    <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <CheckBoxPreference android:summary="Activate/Deactivate batteryManager plugin"
+        android:persistent="true"
+        android:key="status_plugin_batteryManager"
+        android:defaultValue="false"
+        />
+
+    <EditTextPreference android:title="How frequently to calculate (in minutes)"
+        android:summary="5 minutes"
+        android:persistent="true"
+        android:key="frequency_batteryManager"
+        android:defaultValue="5"
+        android:inputType="numberDecimal"
+        />
+
+</PreferenceScreen>
