@@ -1,31 +1,32 @@
 package com.aware.plugin.batteryManager;
 
+
+
 import android.app.IntentService;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.net.Uri;
 import android.util.Log;
 
-import com.aware.Accelerometer;
 import com.aware.Aware;
 import com.aware.Aware_Preferences;
+import com.aware.Battery;
+import com.aware.providers.Battery_Provider;
 import com.aware.utils.Aware_Plugin;
-
-import java.util.List;
 
 public class Plugin extends Aware_Plugin {
 
-    public static Boolean magnetometer = false;
-    public static Boolean light = false;
-    public static Boolean temperature = false;
     public static final String ACTION_AWARE_PLUGIN_BATTERYMANAGER = "ACTION_AWARE_PLUGIN_BATTERYMANAGER";
     public BatteryAlarm alarm = new BatteryAlarm();
-    public static int temp_interval = 5;
+    public static int temp_interval = 1;
 
+    private static boolean is_charging = false;
+    private static long timer = 0;
+    private static long last_timestamp = 0;
     private static ContextProducer contextProducer;
 
     @Override
@@ -41,7 +42,7 @@ public class Plugin extends Aware_Plugin {
         Aware.setSetting(getApplicationContext(), Settings.STATUS_PLUGIN, true);
 
         if( Aware.getSetting(getApplicationContext(), Settings.FREQUENCY_PLUGIN).length() == 0 ) {
-            Aware.setSetting(getApplicationContext(), Settings.FREQUENCY_PLUGIN, 5);
+            Aware.setSetting(getApplicationContext(), Settings.FREQUENCY_PLUGIN, 1);
         }
 
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_BATTERY, true);
@@ -50,6 +51,10 @@ public class Plugin extends Aware_Plugin {
         int interval_min =  Integer.parseInt(Aware.getSetting(getApplicationContext(), Settings.FREQUENCY_PLUGIN));
         alarm.SetAlarm(Plugin.this, interval_min);
         temp_interval = interval_min;
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Battery.ACTION_AWARE_BATTERY_CHANGED);
+        registerReceiver(dataReceiver, filter);
 
         CONTEXT_PRODUCER = new ContextProducer() {
             @Override
@@ -85,6 +90,59 @@ public class Plugin extends Aware_Plugin {
 
         if (DEBUG) Log.d(TAG, "Plugin running");
     }
+
+    private SensorDataReceiver dataReceiver = new SensorDataReceiver();
+    public static class SensorDataReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (DEBUG) Log.d(TAG, "OnReceive");
+            int statue = 0;
+            Cursor last_time = context.getApplicationContext().getContentResolver().query(Battery_Provider.Battery_Data.CONTENT_URI, null, null, null, Battery_Provider.Battery_Data.TIMESTAMP + " DESC LIMIT 1");
+            if (last_time != null && last_time.moveToFirst()) {
+                statue = last_time.getInt(last_time.getColumnIndex(Battery_Provider.Battery_Data.STATUS));
+            }
+            if (last_time != null && !last_time.isClosed()) {
+                last_time.close();
+            }
+            boolean charging = false;
+            if (statue == 2) charging = true;
+            boolean a = is_charging && !charging;
+            boolean b = !is_charging && charging;
+            if (DEBUG) Log.d(TAG, "test change statue "+is_charging+" "+charging+" "+a+" "+b);
+            if (a||b) {
+                if (DEBUG) Log.d(TAG, "Battery change statue");
+                double charge = 0;
+                if (is_charging)
+                    charge = 1;
+                else charge = 0;
+
+                ContentValues context_data = new ContentValues();
+                context_data.put(Provider.BatteryManager_Data.TIMESTAMP, System.currentTimeMillis());
+                context_data.put(Provider.BatteryManager_Data.DEVICE_ID, Aware.getSetting(context.getApplicationContext(), Aware_Preferences.DEVICE_ID));
+                context_data.put(Provider.BatteryManager_Data.RATE, -1);
+                context_data.put(Provider.BatteryManager_Data.CHARGE, charge);
+                context_data.put(Provider.BatteryManager_Data.TIME, timer);
+                context_data.put(Provider.BatteryManager_Data.FORECAST, 0);
+                context.getContentResolver().insert(Provider.BatteryManager_Data.CONTENT_URI, context_data);
+                contextProducer.onContext();
+
+                timer = 0;
+            }
+
+            if(charging) {
+                is_charging = true;
+            }
+            else is_charging = false;
+
+            if( intent.getAction().equals(Battery.ACTION_AWARE_BATTERY_CHANGED) ) {
+                if( last_timestamp == 0 ) last_timestamp = System.currentTimeMillis();
+                    timer += System.currentTimeMillis() - last_timestamp;
+                    last_timestamp = System.currentTimeMillis();
+            }
+        }
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("test", "onStartCommand");
@@ -114,21 +172,23 @@ public class Plugin extends Aware_Plugin {
         super.onDestroy();
 
         alarm.CancelAlarm(Plugin.this);
+
         Aware.setSetting(getApplicationContext(), Aware_Preferences.STATUS_BATTERY, false);
 
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
 
+        unregisterReceiver(dataReceiver);
+
         if (DEBUG) Log.d(TAG, "Plugin terminated");
     }
 
-    protected static void getInout(Context context) {
+    protected static void getBat(Context context) {
         Log.d("test", "getBat");
         try {
             Thread.sleep(10000);
         } catch(InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
-
         Intent bat_service = new Intent(context, Bat_Service.class);
         context.startService(bat_service);
     }
@@ -140,22 +200,61 @@ public class Plugin extends Aware_Plugin {
         @Override
         protected void onHandleIntent(Intent intent) {
             Log.d("test", "onHandleIntent");
-
-            try {
-                Thread.sleep(15000);
-            } catch(InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
             double rate = 0;
             double charge = 0;
             double time = 0;
             double forecast = 0;
 
-            //do the job
+            double rate_last = 0;
+            double scale = 0;
+            double time_last = 0;
+            double rate_previous = 0;
+            double time_previous = 0;
 
-            if (DEBUG) Log.d("test", " ");
+            Cursor last_time = getApplicationContext().getContentResolver().query(Battery_Provider.Battery_Data.CONTENT_URI, null, null, null, Battery_Provider.Battery_Data.TIMESTAMP + " DESC LIMIT 60");
+            if (last_time != null && last_time.moveToFirst()) {
+                if(last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.STATUS))== 2) charge = 1;
+                rate_last = last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.LEVEL));
+                scale = last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.SCALE));
+                time_last = last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.TIMESTAMP));
+                double test = 0;
+                if (charge == 1)
+                    test = 1;
+                while (test == charge && !last_time.isLast()  )
+                {
+                    last_time.moveToNext();
+                    if(last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.STATUS))== 2)
+                        test = 1;
+                    else
+                        test = 0;
+                }
+                rate_previous = last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.LEVEL));
+                time_previous = last_time.getDouble(last_time.getColumnIndex(Battery_Provider.Battery_Data.TIMESTAMP));
+            }
+            if (last_time != null && !last_time.isClosed()) {
+                last_time.close();
+            }
 
-            addData(rate,charge,time,forecast);
+            time = (time_last - time_previous) / (1000*60);
+
+            rate = (rate_last - rate_previous) / time;
+            if (rate <= 0)
+            {
+                rate = rate*(-1);
+            }
+
+            if(charge == 1 && rate>0)
+            forecast = ((scale - rate_last) / rate)*60*1000;
+            else if (charge == 0 && rate>0) forecast = (rate_last / rate)*60*1000;
+            else forecast = 0;
+
+            if( last_timestamp == 0 ) last_timestamp = System.currentTimeMillis();
+            timer += System.currentTimeMillis() - last_timestamp;
+            last_timestamp = System.currentTimeMillis();
+
+            if (DEBUG) Log.d("test", "Rate : "+rate+" %/min, in charge ? : "+charge+" timer : "+timer+" forecast : "+forecast+" min left");
+
+            addData(rate,charge,timer,forecast);
         }
         public void addData(double rate,double charge,double time,double forecast)
         {

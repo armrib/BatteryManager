@@ -10,7 +10,6 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 
 import com.aware.Aware;
-import com.aware.plugin.template.R;
 
 public class Settings extends PreferenceActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -35,7 +34,7 @@ public class Settings extends PreferenceActivity implements SharedPreferences.On
 
         EditTextPreference frequency = (EditTextPreference) findPreference(FREQUENCY_PLUGIN);
         if( Aware.getSetting(getApplicationContext(), FREQUENCY_PLUGIN).length() == 0 ) {
-            Aware.setSetting(getApplicationContext(), FREQUENCY_PLUGIN, 5);
+            Aware.setSetting(getApplicationContext(), FREQUENCY_PLUGIN, 1);
         }
         frequency.setSummary(Aware.getSetting(getApplicationContext(), FREQUENCY_PLUGIN) + " minutes");
     }
@@ -61,8 +60,8 @@ public class Settings extends PreferenceActivity implements SharedPreferences.On
         }
 
         if( setting.getKey().equals(FREQUENCY_PLUGIN)) {
-            setting.setSummary(sharedPreferences.getString(key, "5") + " minutes");
-            Aware.setSetting(getApplicationContext(), key, sharedPreferences.getString(key, "5"));
+            setting.setSummary(sharedPreferences.getString(key, "1") + " minutes");
+            Aware.setSetting(getApplicationContext(), key, sharedPreferences.getString(key, "1"));
         }
 
         //Apply the new settings

@@ -18,15 +18,15 @@ public class BatteryAlarm extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d("test", "InOutAlarm onReceive");
+        Log.d("test", "BatteryAlarm onReceive");
         Intent apply = new Intent(Aware.ACTION_AWARE_REFRESH);
         context.sendBroadcast(apply);
 
-        Plugin.getInout(context);
+        Plugin.getBat(context);
     }
 
     public void SetAlarm(Context context, int interval) {
-        Log.d("test", "InOutAlarm SetAlarm");
+        Log.d("test", "BatteryAlarm SetAlarm");
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Intent i = new Intent(context, BatteryAlarm.class);
         PendingIntent pi = PendingIntent.getBroadcast(context, 0, i, 0);
@@ -34,7 +34,7 @@ public class BatteryAlarm extends BroadcastReceiver {
     }
 
     public void CancelAlarm(Context context) {
-        Log.d("asd", "InOutAlarm CancelAlarm");
+        Log.d("asd", "BatteryAlarm CancelAlarm");
         Intent intent = new Intent(context, BatteryAlarm.class);
         PendingIntent sender = PendingIntent.getBroadcast(context, 0, intent, 0);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

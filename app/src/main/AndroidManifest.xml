@@ -17,7 +17,7 @@
             android:exported="true" />
         <service
             android:exported="true"
-            android:name="com.aware.plugin.batteryManager.Plugin$bat_service"/>
+            android:name="com.aware.plugin.batteryManager.Plugin$Bat_Service"/>
         <service android:name="com.aware.Aware"/>
         <receiver android:name="BatteryAlarm"/>
         <activity
