@@ -25,7 +25,7 @@ public class Plugin extends Aware_Plugin {
     public static int temp_interval = 1;
 
     private static boolean is_charging = false;
-    private static long timer = 0;
+    private static double timer = 0;
     private static long last_timestamp = 0;
     private static ContextProducer contextProducer;
 
@@ -51,6 +51,15 @@ public class Plugin extends Aware_Plugin {
         int interval_min =  Integer.parseInt(Aware.getSetting(getApplicationContext(), Settings.FREQUENCY_PLUGIN));
         alarm.SetAlarm(Plugin.this, interval_min);
         temp_interval = interval_min;
+
+        Cursor last_time = getApplicationContext().getContentResolver().query(Provider.BatteryManager_Data.CONTENT_URI, null, null, null, Provider.BatteryManager_Data.TIMESTAMP + " DESC LIMIT 1");
+        if (last_time != null && last_time.moveToFirst()) {
+            timer = last_time.getDouble(last_time.getColumnIndex(Provider.BatteryManager_Data.TIME));
+            last_timestamp = last_time.getLong(last_time.getColumnIndex(Provider.BatteryManager_Data.TIMESTAMP));
+        }
+        if (last_time != null && !last_time.isClosed()) {
+            last_time.close();
+        }
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Battery.ACTION_AWARE_BATTERY_CHANGED);
@@ -125,9 +134,16 @@ public class Plugin extends Aware_Plugin {
                 context_data.put(Provider.BatteryManager_Data.TIME, timer);
                 context_data.put(Provider.BatteryManager_Data.FORECAST, 0);
                 context.getContentResolver().insert(Provider.BatteryManager_Data.CONTENT_URI, context_data);
-                contextProducer.onContext();
 
                 timer = 0;
+                context_data.put(Provider.BatteryManager_Data.TIMESTAMP, System.currentTimeMillis());
+                context_data.put(Provider.BatteryManager_Data.DEVICE_ID, Aware.getSetting(context.getApplicationContext(), Aware_Preferences.DEVICE_ID));
+                context_data.put(Provider.BatteryManager_Data.RATE, -1);
+                context_data.put(Provider.BatteryManager_Data.CHARGE, charge);
+                context_data.put(Provider.BatteryManager_Data.TIME, timer);
+                context_data.put(Provider.BatteryManager_Data.FORECAST, 0);
+                context.getContentResolver().insert(Provider.BatteryManager_Data.CONTENT_URI, context_data);
+                contextProducer.onContext();
             }
 
             if(charging) {
@@ -178,6 +194,9 @@ public class Plugin extends Aware_Plugin {
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
 
         unregisterReceiver(dataReceiver);
+
+        Intent bat_service = new Intent(getApplicationContext(), Bat_Service.class);
+        getApplicationContext().stopService(bat_service);
 
         if (DEBUG) Log.d(TAG, "Plugin terminated");
     }
