@@ -1,4 +1,4 @@
-package com.aware.plugin.batteryManager;
+package com.aware.plugin.battery_manager;
 
 import java.util.HashMap;
 import android.content.ContentProvider;
@@ -15,22 +15,20 @@ import android.provider.BaseColumns;
 import android.util.Log;
 import com.aware.Aware;
 import com.aware.utils.DatabaseHelper;
-/**
- * Created by Armand on 12/03/2015.
- */
+
 public class Provider extends ContentProvider {
 
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
 
-    public static String AUTHORITY = "com.aware.plugin.batteryManager.provider.batteryManager";
+    public static String AUTHORITY = "com.aware.plugin.battery_manager.provider.battery_manager";
 
     private static final int BATTERYMANAGER = 1;
     private static final int BATTERYMANAGER_ID = 2;
 
-    public static final String DATABASE_NAME = Environment.getExternalStorageDirectory() + "/AWARE/plugin_batteryManager.db";
+    public static final String DATABASE_NAME = Environment.getExternalStorageDirectory() + "/AWARE/plugin_battery_manager.db";
 
     public static final String[] DATABASE_TABLES = {
-            "plugin_batteryManager"
+            "plugin_battery_manager"
     };
 
     public static final String[] TABLES_FIELDS = {
@@ -47,9 +45,9 @@ public class Provider extends ContentProvider {
     public static final class BatteryManager_Data implements BaseColumns {
         private BatteryManager_Data(){};
 
-        public static final Uri CONTENT_URI = Uri.parse("content://"+AUTHORITY+"/plugin_batteryManager");
-        public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.aware.plugin.batteryManager";
-        public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.aware.plugin.batteryManager";
+        public static final Uri CONTENT_URI = Uri.parse("content://"+AUTHORITY+"/plugin_battery_manager");
+        public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.aware.plugin.battery_manager";
+        public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.aware.plugin.battery_manager";
 
         public static final String _ID = "_id";
         public static final String TIMESTAMP = "timestamp";
@@ -68,13 +66,13 @@ public class Provider extends ContentProvider {
     @Override
     public boolean onCreate() {
 
-        AUTHORITY = getContext().getPackageName() + ".provider.batteryManager";
+        AUTHORITY = getContext().getPackageName() + ".provider.battery_manager";
 
         URIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         URIMatcher.addURI(AUTHORITY, DATABASE_TABLES[0], BATTERYMANAGER);
         URIMatcher.addURI(AUTHORITY, DATABASE_TABLES[0]+"/#", BATTERYMANAGER_ID);
 
-        databaseMap = new HashMap<String, String>();
+        databaseMap = new HashMap<>();
         databaseMap.put(BatteryManager_Data._ID, BatteryManager_Data._ID);
         databaseMap.put(BatteryManager_Data.TIMESTAMP, BatteryManager_Data.TIMESTAMP);
         databaseMap.put(BatteryManager_Data.DEVICE_ID, BatteryManager_Data.DEVICE_ID);
@@ -90,10 +88,10 @@ public class Provider extends ContentProvider {
         if (databaseHelper == null) {
             databaseHelper = new DatabaseHelper( getContext(), DATABASE_NAME, null, DATABASE_VERSION, DATABASE_TABLES, TABLES_FIELDS );
         }
-        if( databaseHelper != null && ( database == null || ! database.isOpen() )) {
+        if(  database == null || ! database.isOpen() ) {
             database = databaseHelper.getWritableDatabase();
         }
-        return( database != null && databaseHelper != null);
+        return( database != null && databaseHelper != null );
     }
 
     @Override

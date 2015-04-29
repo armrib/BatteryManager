@@ -1,4 +1,4 @@
-package com.aware.plugin.batteryManager;
+package com.aware.plugin.battery_manager;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,9 +13,11 @@ import com.aware.Aware;
 
 public class Settings extends PreferenceActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
-    public static final String STATUS_PLUGIN = "status_plugin_batteryManager";
+    /**
+     * Status of the plugin
+     */
+    public static final String STATUS_PLUGIN = "status_plugin_battery_manager";
 
-    public static final String FREQUENCY_PLUGIN = "frequency_batteryManager";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,12 +33,6 @@ public class Settings extends PreferenceActivity implements SharedPreferences.On
         //Make sure to load the latest values
         CheckBoxPreference status = (CheckBoxPreference) findPreference(STATUS_PLUGIN);
         status.setChecked(Aware.getSetting(this, STATUS_PLUGIN).equals("true"));
-
-        EditTextPreference frequency = (EditTextPreference) findPreference(FREQUENCY_PLUGIN);
-        if( Aware.getSetting(getApplicationContext(), FREQUENCY_PLUGIN).length() == 0 ) {
-            Aware.setSetting(getApplicationContext(), FREQUENCY_PLUGIN, 1);
-        }
-        frequency.setSummary(Aware.getSetting(getApplicationContext(), FREQUENCY_PLUGIN) + " minutes");
     }
 
     @Override
@@ -58,14 +54,5 @@ public class Settings extends PreferenceActivity implements SharedPreferences.On
                 Aware.stopPlugin(this, getPackageName());
             }
         }
-
-        if( setting.getKey().equals(FREQUENCY_PLUGIN)) {
-            setting.setSummary(sharedPreferences.getString(key, "1") + " minutes");
-            Aware.setSetting(getApplicationContext(), key, sharedPreferences.getString(key, "1"));
-        }
-
-        //Apply the new settings
-        Intent apply = new Intent(Aware.ACTION_AWARE_REFRESH);
-        sendBroadcast(apply);
     }
 }

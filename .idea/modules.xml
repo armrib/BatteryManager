@@ -2,9 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/BatteryManager.iml" filepath="$PROJECT_DIR$/BatteryManager.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/aware-batteryManager.iml" filepath="$PROJECT_DIR$/aware-batteryManager.iml" />
     </modules>
   </component>
 </project>
-

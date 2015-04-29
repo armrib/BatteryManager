@@ -1,4 +1,4 @@
-package com.aware.plugin.batteryManager;
+package com.aware.plugin.battery_manager;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
